@@ -16,6 +16,7 @@ public partial class App : System.Windows.Application
     private ScamGuardService? _guard;
     private DispatcherTimer? _timer;
     private bool _checking;
+    private bool _openAtLoginEnabled;
     private Window? _hiddenWindow;
     private IntPtr _hwnd;
 
@@ -41,6 +42,8 @@ public partial class App : System.Windows.Application
 
         try
         {
+            CultureHelper.ApplyUserInterfaceCulture();
+
             _hiddenWindow = new Window
             {
                 Width = 0,
@@ -54,6 +57,7 @@ public partial class App : System.Windows.Application
             _hwnd = new WindowInteropHelper(_hiddenWindow).Handle;
 
             SetupTray();
+            _ = RefreshOpenAtLoginStateAsync();
             StartupLog.Write("Tray ready");
 
             ToastAppRegistration.EnsureRegistered();
@@ -61,6 +65,7 @@ public partial class App : System.Windows.Application
             try
             {
                 _notifications = new NotificationService();
+                ToastAppRegistration.RefreshDisplayName();
                 _notifications.Show(
                     L.Format("StartupTitle", L.Get("AppName")),
                     L.Get("StartupBody"),
@@ -133,6 +138,7 @@ public partial class App : System.Windows.Application
         menu.AddLabel("\u00A9 Studio Tomippe");
         menu.AddSeparator();
         menu.AddItem(L.Get("MenuCheckNow"), () => _ = RunCheckAsync(forceNotify: true));
+        menu.AddCheckedItem(L.Get("MenuOpenAtLogin"), _openAtLoginEnabled, ToggleOpenAtLogin);
         menu.AddItem(L.Get("MenuOpenLogFolder"), OpenLogFolder);
         menu.AddSeparator();
         menu.AddItem(L.Get("MenuQuit"), () => Shutdown());
@@ -193,4 +199,28 @@ public partial class App : System.Windows.Application
 
     private static string GetVersion() =>
         typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.1.0";
+
+    private async Task RefreshOpenAtLoginStateAsync()
+    {
+        try
+        {
+            _openAtLoginEnabled = await OpenAtLoginHelper.IsEnabledAsync();
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Write(ex, "RefreshOpenAtLoginStateAsync failed");
+        }
+    }
+
+    private async void ToggleOpenAtLogin()
+    {
+        try
+        {
+            _openAtLoginEnabled = await OpenAtLoginHelper.ToggleAsync();
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Write(ex, "ToggleOpenAtLogin failed");
+        }
+    }
 }

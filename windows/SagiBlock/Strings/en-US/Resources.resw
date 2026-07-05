@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <x:Schema xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns="http://schemas.microsoft.com/winfx/2006/xaml">
+    <x:Property Name="Classe" />
+    <x:Property Name="Association" />
+    <x:Property Name="Members" />
+    <x:Property Name="DependencyProperty" />
+    <x:Property Name="AttachedProperty" />
+    <x:Property Name="RadFieldProperty" />
+    <x:Property Name="RadFieldsProperty" />
+  </x:Schema>
+  <data name="AppDisplayName" xml:space="preserve">
+    <value>SAGI BLOCK</value>
+  </data>
+</root>

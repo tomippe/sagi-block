@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -5,9 +6,7 @@ using Microsoft.Win32;
 namespace SagiBlock.Helpers;
 
 /// <summary>
-/// Win32 非 MSIX アプリのトースト表示名は exe 名ではなく
-/// HKCU\Software\Classes\AppUserModelId\{AUMID}\DisplayName で決まる。
-/// ショートカットは AUMID 紐付け用（MS 要件）で、表示名の正本ではない。
+/// Win32 非 MSIX アプリのトースト表示名は AUMID 登録と Start Menu ショートカットの両方で決まる。
 /// </summary>
 public static class ToastAppRegistration
 {
@@ -21,6 +20,11 @@ public static class ToastAppRegistration
         "诈骗拦截.lnk"
     ];
 
+    private static string ProgramsDirectory =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs");
+
+    private static string ShortcutPath => Path.Combine(ProgramsDirectory, ShortcutFileName);
+
     public static void EnsureRegistered()
     {
         if (PackageHelper.IsPackaged())
@@ -28,6 +32,7 @@ public static class ToastAppRegistration
 
         try
         {
+            CultureHelper.ApplyUserInterfaceCulture();
             var displayName = L.Get("AppName");
             var iconPath = TrayIconHelper.EnsureLogoFilePath();
 
@@ -41,6 +46,37 @@ public static class ToastAppRegistration
         }
     }
 
+    /// <summary>
+    /// トースト上部のアプリ名を現在の UI 言語に合わせて更新する。
+    /// </summary>
+    public static void RefreshDisplayName()
+    {
+        if (PackageHelper.IsPackaged())
+            return;
+
+        try
+        {
+            CultureHelper.ApplyUserInterfaceCulture();
+            var displayName = L.Get("AppName");
+            var iconPath = TrayIconHelper.EnsureLogoFilePath();
+
+            RegisterAppIdentity(displayName, iconPath);
+
+            if (File.Exists(ShortcutPath))
+                TrySetShortcutProperties(ShortcutPath, displayName);
+            else
+                EnsureStartMenuShortcut(displayName, iconPath);
+
+            NotifyShellAssociationChanged();
+            StartupLog.Write(
+                $"Toast display name refreshed: {displayName} ({CultureInfo.CurrentUICulture.Name})");
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Write(ex, "RefreshDisplayName failed");
+        }
+    }
+
     private static void RegisterAppIdentity(string displayName, string iconPath)
     {
         try
@@ -50,11 +86,9 @@ public static class ToastAppRegistration
             if (key is null)
                 return;
 
-            key.SetValue("DisplayName", displayName, RegistryValueKind.ExpandString);
-            key.SetValue("IconUri", iconPath, RegistryValueKind.ExpandString);
+            key.SetValue("DisplayName", displayName, RegistryValueKind.String);
+            key.SetValue("IconUri", iconPath, RegistryValueKind.String);
             key.SetValue("IconBackgroundColor", "FFDDDDDD", RegistryValueKind.String);
-
-            StartupLog.Write($"Toast identity registered: DisplayName={displayName}");
         }
         catch (Exception ex)
         {
@@ -64,12 +98,8 @@ public static class ToastAppRegistration
 
     private static void EnsureStartMenuShortcut(string displayName, string iconPath)
     {
-        var programs = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
-            "Programs");
-        Directory.CreateDirectory(programs);
+        Directory.CreateDirectory(ProgramsDirectory);
 
-        var shortcutPath = Path.Combine(programs, ShortcutFileName);
         var exePath = Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
         {
@@ -79,7 +109,7 @@ public static class ToastAppRegistration
 
         foreach (var legacyName in LegacyShortcutNames)
         {
-            var legacyPath = Path.Combine(programs, legacyName);
+            var legacyPath = Path.Combine(ProgramsDirectory, legacyName);
             if (File.Exists(legacyPath))
                 File.Delete(legacyPath);
         }
@@ -92,7 +122,7 @@ public static class ToastAppRegistration
         }
 
         dynamic shell = Activator.CreateInstance(shellType)!;
-        dynamic shortcut = shell.CreateShortcut(shortcutPath);
+        dynamic shortcut = shell.CreateShortcut(ShortcutPath);
         shortcut.TargetPath = exePath;
         shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
         shortcut.Description = displayName;
@@ -100,10 +130,10 @@ public static class ToastAppRegistration
         shortcut.SetIconLocation(string.IsNullOrWhiteSpace(iconPath) ? exePath : iconPath, 0);
         shortcut.Save();
 
-        if (TrySetShortcutProperties(shortcutPath, displayName))
-            StartupLog.Write($"Toast shortcut ready: {AppUserModelId} -> {shortcutPath}");
+        if (TrySetShortcutProperties(ShortcutPath, displayName))
+            StartupLog.Write($"Toast shortcut ready: {AppUserModelId} -> {ShortcutPath}");
         else
-            StartupLog.Write($"Toast shortcut saved but AppUserModelID was not applied: {shortcutPath}");
+            StartupLog.Write($"Toast shortcut saved but AppUserModelID was not applied: {ShortcutPath}");
     }
 
     private static bool TrySetShortcutProperties(string shortcutPath, string displayName)
@@ -123,6 +153,10 @@ public static class ToastAppRegistration
             var appIdKey = PropertyKeys.AppUserModelId;
             propertyStore.SetValue(ref appIdKey, appId);
 
+            var empty = PropVariant.FromString("");
+            var resourceKey = PropertyKeys.RelaunchDisplayNameResource;
+            propertyStore.SetValue(ref resourceKey, empty);
+
             var name = PropVariant.FromString(displayName);
             var nameKey = PropertyKeys.RelaunchDisplayName;
             propertyStore.SetValue(ref nameKey, name);
@@ -140,6 +174,15 @@ public static class ToastAppRegistration
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern void SetCurrentProcessExplicitAppUserModelID(string appId);
+
+    private static void NotifyShellAssociationChanged()
+    {
+        const int shcneAssocChanged = 0x08000000;
+        SHChangeNotify(shcneAssocChanged, 0, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    [DllImport("shell32.dll")]
+    private static extern void SHChangeNotify(int wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
     [ComImport]
     [Guid("00000109-0000-0000-C000-000000000046")]
@@ -192,6 +235,12 @@ public static class ToastAppRegistration
         {
             FmtId = new Guid("9F4C2855-9F59-4B38-8AE8-CFAB9F2B5C6C"),
             Pid = 5
+        };
+
+        public static readonly PropertyKey RelaunchDisplayNameResource = new()
+        {
+            FmtId = new Guid("9F4C2855-9F59-4B38-8AE8-CFAB9F2B5C6C"),
+            Pid = 4
         };
 
         public static readonly PropertyKey RelaunchDisplayName = new()

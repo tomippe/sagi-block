@@ -8,7 +8,6 @@ Partner Center で入力する文言を 3 言語分まとめる。コピペ用�
 
 プライバシーポリシー URL
 https://apps.tomippe.jp/sagi-block/policy/
-（未作成。公開前に apps.tomippe.jp で policy ページを用意する）
 
 カテゴリ
 セキュリティ / Security
@@ -59,6 +58,30 @@ Identity Version の第 4 桁は常に 0（例: version.txt が 0.1.3 なら man
 
 提出パッケージ
 windows/publish/msix/SagiBlock.msixbundle
+
+---
+
+## Restricted capabilities（Partner Center 申告）
+
+manifest（`Package.appxmanifest`）で宣言している **Restricted capabilities は 2 つ**。Partner Center の提出フォームでもこの 2 つを選び、理由欄に下記英語をコピペする。
+
+| 種別 | 名前 | manifest | Partner Center で申告 |
+|---|---|---|---|
+| Restricted | runFullTrust | rescap:Capability | **要** |
+| Restricted | unvirtualizedResources | rescap:Capability | **要** |
+| 通常 | internetClient | Capability | 申告不要（Restricted ではない） |
+
+### runFullTrust — 理由（英語・コピペ用）
+
+The app is a full-trust desktop tray utility (EntryPoint: Windows.FullTrustApplication). It must enumerate top-level windows owned by other processes, read window titles and visible text to detect fake virus-warning pages, send WM_CLOSE / CloseMainWindow to close those browser windows, and in some cases terminate a browser process tree when notification settings must be updated safely. These cross-process operations are not available to sandboxed Store apps.
+
+### unvirtualizedResources — 理由（英語・コピペ用）
+
+The manifest disables file-system and registry write virtualization (desktop6:FileSystemWriteVirtualization / RegistryWriteVirtualization disabled). The app must read and write Chromium-based browsers’ real Preferences JSON under the user profile (e.g. %LOCALAPPDATA%\Google\Chrome\User Data\...) to change notification permissions from Allow to Block, and write logs under %LOCALAPPDATA%\SagiBlock. Virtualized package paths would point to the wrong locations and break notification cleanup.
+
+### 通常 capability（参考・申告不要）
+
+internetClient — downloads public threat intelligence feeds only (PhishTank, URLhaus) to evaluate notification origin hostnames. No user content or personal identifiers are sent.
 
 ---
 
@@ -151,8 +174,14 @@ How to verify the app:
 
 1. Launch SagiBlock. It runs in the system tray only (no main window). Confirm the tray icon appears and a startup notification may show.
 
-2. Fake warning page test (optional, use a local HTML test page, not a real scam site):
-   Open a browser window whose title or visible text strongly resembles a fake virus warning (e.g. contains phrases like "Windows Defender - Security Warning", "Trojan Spyware", or Japanese equivalents). Within about 30 seconds, or after choosing Check Now from the tray menu, the app should attempt to close that window. A toast notification may report that a suspected scam page was closed.
+2. Fake warning page test (recommended — safe official demo site):
+   Use the IPA (Information-technology Promotion Agency, Japan) educational experience site. It is not a real scam; all screens are clearly staged for training.
+   URL: https://www.ipa.go.jp/security/anshin/measures/fa-experience.html
+   Steps:
+   a. Read the introductory instructions on that page (section “はじめに”).
+   b. Start the experience from the site (button that launches the demo). A browser window will open showing fake virus-scan / fake Microsoft Defender-style warnings with phrases such as “Trojan Spyware”, “このPCへのアクセスはブロックされています”, and dummy phone numbers (e.g. 000-1234-5678).
+   c. Ensure SagiBlock is running in the tray. Within about 30 seconds, or immediately after choosing Check Now from the tray menu, the app should attempt to close that browser window. A toast notification may report that a suspected scam page was closed.
+   Alternative (local, also safe): clone the repo and serve the bundled test-pages folder on localhost, then open http://127.0.0.1:8765/scareware.html (see test-pages/README.md). Do not browse real scam sites for testing.
 
 3. Notification permission test (Chromium browser):
    In Chrome (or Edge), manually allow notifications for a suspicious-looking origin in site settings. Run Check Now. If the origin is scored as suspicious, the app may close the browser process first, change the origin from Allow to Block in the browser’s Preferences file under %LOCALAPPDATA%, then restart the browser with a new tab (about:blank). Relaunch if needed and confirm the site is blocked for notifications.
@@ -169,12 +198,11 @@ Technical notes:
 - Threat feeds: PhishTank (daily download) and URLhaus API (cached 7 days) are used only to evaluate notification origin hostnames when local scoring is insufficient. No user content or personal identifiers are transmitted; only domain/host lookups against public feeds.
 - Logs: %LOCALAPPDATA%\SagiBlock\events.jsonl and startup.log. No cloud upload.
 
-Why runFullTrust is required:
+Why runFullTrust and unvirtualizedResources are required:
 
-- To close other applications’ browser windows and terminate browser processes when needed.
-- To read and write browser Preferences files outside the app package (user AppData).
-- File system and registry write virtualization are disabled so browser profile paths resolve to the real user profile.
-- These operations are not available to sandboxed Store apps. Capabilities: runFullTrust, unvirtualizedResources, internetClient (threat feeds only).
+- runFullTrust: close other applications’ browser windows, enumerate windows, read titles/text, terminate browser processes when needed.
+- unvirtualizedResources: read/write real Chromium Preferences under the user profile; write logs to %LOCALAPPDATA%\SagiBlock (virtualization disabled in manifest).
+- internetClient (standard, not restricted): download public threat feeds only.
 
 Privacy:
 
@@ -186,8 +214,9 @@ Privacy:
 
 - [ ] version.txt と Package.appxmanifest の Version を一致させる（第 4 桁は 0）
 - [ ] manifest の Identity / DisplayName / Publisher が Product identity と一致（DisplayName は SagiBlock）
-- [ ] プライバシーポリシー URL を Partner Center に設定する
+- [x] プライバシーポリシー URL を Partner Center に設定する（ページ公開済み。Partner Center への入力は申請時）
 - [ ] ストアの Product name・説明・短い説明に上記 3 言語を登録する
+- [ ] Restricted capabilities に runFullTrust と unvirtualizedResources を申告し、理由欄に上記英語を貼る
 - [ ] データ収集の質問で「個人データを収集しない」を選択する
 - [ ] 提出用 MSIX は windows で .\build.ps1 実行後の publish\msix\SagiBlock.msixbundle を使用する
 

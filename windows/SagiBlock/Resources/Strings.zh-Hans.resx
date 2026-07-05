@@ -6,6 +6,7 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="AppName" xml:space="preserve"><value>诈骗拦截</value></data>
   <data name="MenuCheckNow" xml:space="preserve"><value>立即检查</value></data>
+  <data name="MenuOpenAtLogin" xml:space="preserve"><value>登录时打开</value></data>
   <data name="MenuOpenLogFolder" xml:space="preserve"><value>打开日志文件夹</value></data>
   <data name="MenuQuit" xml:space="preserve"><value>退出</value></data>
   <data name="StartupTitle" xml:space="preserve"><value>{0} 已启动</value></data>

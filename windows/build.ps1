@@ -156,6 +156,11 @@ foreach ($rid in $rids) {
     }
     Copy-Item (Join-Path $assetsDir "*.png") $contentAssetsDir -Force
 
+    $stringsSrc = Join-Path $projectDir "Strings"
+    if (Test-Path $stringsSrc) {
+        Copy-Item -Recurse $stringsSrc (Join-Path $contentDir "Strings") -Force
+    }
+
     $manifestSrc = Join-Path $projectDir "Package.appxmanifest"
     $manifestDst = Join-Path $contentDir "AppxManifest.xml"
     $manifestContent = Get-Content $manifestSrc -Raw -Encoding UTF8
@@ -211,13 +216,30 @@ if ($msixFiles.Count -gt 0) {
 
     foreach ($msix in $msixFiles) { Copy-Item $msix $bundleContentDir }
 
-    & $makeappx bundle /d $bundleContentDir /p $bundlePath /o
+    # /bv 必須: 未指定だと bundle Identity が日時 (例: 2026.705.1654.0) になり Partner Center が分かりにくい
+    & $makeappx bundle /d $bundleContentDir /p $bundlePath /bv $msixVersion /o
 
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Bundle creation failed. Individual MSIX files are still available."
     } else {
         $bundleSize = [math]::Round((Get-Item $bundlePath).Length / 1MB, 1)
-        Write-Host "OK: $bundlePath ($bundleSize MB)" -ForegroundColor Green
+        Write-Host "OK: $bundlePath ($bundleSize MB, bundle v$msixVersion)" -ForegroundColor Green
+
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $bundleZip = [System.IO.Compression.ZipFile]::OpenRead($bundlePath)
+        try {
+            $bundleManifest = $bundleZip.GetEntry("AppxMetadata/AppxBundleManifest.xml")
+            if ($bundleManifest) {
+                $reader = New-Object System.IO.StreamReader($bundleManifest.Open())
+                $xml = $reader.ReadToEnd()
+                $reader.Close()
+                if ($xml -notmatch "Version=`"$([regex]::Escape($msixVersion))`"") {
+                    Write-Warning "Bundle manifest version mismatch (expected $msixVersion). Check AppxBundleManifest.xml."
+                }
+            }
+        } finally {
+            $bundleZip.Dispose()
+        }
     }
 
     Remove-Item -Recurse -Force $bundleContentDir -ErrorAction SilentlyContinue

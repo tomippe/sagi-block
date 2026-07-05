@@ -11,11 +11,16 @@ public sealed class NotificationService
 
     public void Show(string title, string body, string key)
     {
+        CultureHelper.ApplyUserInterfaceCulture();
+
         var now = DateTimeOffset.Now;
         if (_lastShown.TryGetValue(key, out var last) && now - last < TimeSpan.FromMinutes(10))
             return;
 
         _lastShown[key] = now;
+
+        if (!PackageHelper.IsPackaged())
+            ToastAppRegistration.RefreshDisplayName();
 
         var logoPath = TrayIconHelper.EnsureLogoFilePath();
         var logoUri = new Uri(logoPath, UriKind.Absolute);

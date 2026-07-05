@@ -6,6 +6,7 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="AppName" xml:space="preserve"><value>SAGI BLOCK</value></data>
   <data name="MenuCheckNow" xml:space="preserve"><value>Check Now</value></data>
+  <data name="MenuOpenAtLogin" xml:space="preserve"><value>Open at Login</value></data>
   <data name="MenuOpenLogFolder" xml:space="preserve"><value>Open Log Folder</value></data>
   <data name="MenuQuit" xml:space="preserve"><value>Quit</value></data>
   <data name="StartupTitle" xml:space="preserve"><value>{0} is running</value></data>

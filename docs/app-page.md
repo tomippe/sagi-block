@@ -13,20 +13,23 @@
 
 ## KV背景・キー色
 
-- **app-kvbg**: （未設定 — 初回作成時にユーザー確認）
-- **app-keycolor**: （未設定 — 例: 盾アイコンの黄色系）
+- **app-kvbg**: **2383**（パトライト KV 写真・ユーザー提供）
+- **app-keycolor**: **#FED45B**（Windows アイコンのイエロー）
 - **app-kvbgaddcss**:
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  background-blend-mode: screen;
+  background-blend-mode: luminosity;
 
 ## WordPress / .env
 
-- **WP_APP_POST_ID**: （未作成）
+- **WP_APP_POST_ID**: **2381**
 - **WP_APP_PAGE_URL**: https://apps.tomippe.jp/sagi-block/
-- **WP_POLICY_POST_ID**: （未作成）
+- **WP_POLICY_POST_ID**: **2385**
 - **WP_POLICY_PAGE_URL**: https://apps.tomippe.jp/sagi-block/policy/
+- **app-icon**: **2382**（`windows/SagiBlock/Assets/app-icon.png`）
+- **app-ss01**: **2386**（IPA 体験サイト検知トースト・1024×507）
+- **app-ss01width**: **700**
 
 ## 本文（content）メモ
 
@@ -40,9 +43,9 @@
 
 ## 実施済み / 未実施
 
-- [ ] 紹介ページ作成
-- [ ] プライバシーポリシーページ作成
-- [ ] app-icon / app-ss01 アップロード
+- [x] 紹介ページ作成（2026.07.06）
+- [x] プライバシーポリシーページ作成（2026.07.06）
+- [x] app-icon / app-kvbg / app-ss01 アップロード
 - [x] Microsoft Store Product identity 取得（Store ID: 9PKH91ZX0W9J）
 - [x] MSIX ビルド（windows/build.ps1）
 

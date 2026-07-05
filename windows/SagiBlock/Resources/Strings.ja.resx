@@ -6,6 +6,7 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="AppName" xml:space="preserve"><value>詐欺ブロック</value></data>
   <data name="MenuCheckNow" xml:space="preserve"><value>今すぐチェック</value></data>
+  <data name="MenuOpenAtLogin" xml:space="preserve"><value>ログイン時に開く</value></data>
   <data name="MenuOpenLogFolder" xml:space="preserve"><value>ログフォルダを開く</value></data>
   <data name="MenuQuit" xml:space="preserve"><value>終了</value></data>
   <data name="StartupTitle" xml:space="preserve"><value>{0} を起動しました</value></data>
