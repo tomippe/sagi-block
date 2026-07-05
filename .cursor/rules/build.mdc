@@ -1,0 +1,62 @@
+---
+description: 詐欺ブロック（SagiBlock）のビルド仕様
+alwaysApply: true
+---
+
+# 詐欺ブロック ビルド仕様
+
+**共通ルール（自動では読み込まれないため、ファイル編集・ビルド・コミットの前に必ず Read ツールで読むこと）:**
+- `../build-common/.cursor/rules/build-system.mdc`
+
+## 概要
+
+- **種別**: ネイティブ Windows（.NET 8 / MSIX）。macOS は将来予定（`mac/`）
+- **バージョン正本**: `windows/version.txt`
+- **Mac 側**: `./build.sh` — manifest 同期・FTP・版上げ・Git コミット
+- **Windows 側**: `windows/build.ps1` — EXE + MSIX ビルド（Windows PC 上で実行）
+- **デプロイ**: Microsoft Store（Partner Center）。`manifest.json` は `apps.tomippe.jp/sagi-block/`
+
+## ビルドの流れ
+
+1. **Windows PC**: `cd windows` → `powershell -ExecutionPolicy Bypass -File .\build.ps1`
+2. **Mac**（Store 申請・版反映後）: `./build.sh -cm "変更内容の要約"`
+3. Partner Center へ `windows/publish/msix/SagiBlock.msixbundle` をアップロード
+
+## Windows リリースビルド
+
+- **リリースビルドの標準コマンド**: `powershell -ExecutionPolicy Bypass -File .\build.ps1`（作業ディレクトリは `windows/`）
+- **`dotnet build` は確認用**。配布物（MSIX）作成の代替として扱わない
+- **期待成果物**: `windows/publish/msix/SagiBlock.msixbundle`、`SagiBlock_x64.msix`、`SagiBlock_arm64.msix`
+- **EXE のみ**: `.\build.ps1 -Exe`
+- **クリーン後フルビルド**: `.\build.ps1 -Clean`
+- 詳細: `windows/BUILD.md`
+
+## build.sh（Mac）
+
+| オプション | 用途 |
+|---|---|
+| `-cm "メッセージ"` | Git コミット要約 |
+| `-noverup` | 版上げスキップ（ユーザー明示時のみ） |
+
+- `manifest.json` の `win_version` を更新して FTP アップロード
+- 成功後 `windows/version.txt` をパッチ +1
+- Git コミット＆プッシュ（remote 設定時）
+
+## Microsoft Store
+
+- 申請用文言・Product identity: `docs/store-metadata.md`
+- 紹介ページ: `docs/app-page.md`
+- manifest DisplayName: `SagiBlock`（ASCII）。Identity: `StudioTomippe.19837858EB356`
+- Store ID: `9PKH91ZX0W9J`
+- Identity Version: `X.Y.Z.0`（第 4 桁は常に 0）
+
+## 固有設定
+
+- パッケージ: フルトラスト MSIX（`runFullTrust` + ファイル/レジストリ仮想化無効）
+- ローカライズ: ja, en, zh-Hans（`Resources/Strings.*.resx`）
+- AUMID（非 MSIX トースト）: `jp.tomippe.sagiBlock`
+
+## Git
+
+- リモート: `https://github.com/tomippe/sagi-block.git`
+- ビルド成果物（`bin/`, `obj/`, `publish/`）は `.gitignore` で除外

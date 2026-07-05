@@ -1,0 +1,19 @@
+# Windows / .NET
+windows/SagiBlock/bin/
+windows/SagiBlock/obj/
+windows/publish/
+windows/last-build.log
+
+# macOS（将来）
+mac/build/
+*.provisionprofile
+
+# OS / IDE
+.DS_Store
+.vs/
+*.user
+*.suo
+
+# Secrets
+.env
+sftp.json

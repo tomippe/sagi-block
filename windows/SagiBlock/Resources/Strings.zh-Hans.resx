@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppName" xml:space="preserve"><value>诈骗拦截</value></data>
+  <data name="MenuCheckNow" xml:space="preserve"><value>立即检查</value></data>
+  <data name="MenuOpenLogFolder" xml:space="preserve"><value>打开日志文件夹</value></data>
+  <data name="MenuQuit" xml:space="preserve"><value>退出</value></data>
+  <data name="StartupTitle" xml:space="preserve"><value>{0} 已启动</value></data>
+  <data name="StartupBody" xml:space="preserve"><value>每 30 秒检查一次虚假警告页面和诈骗通知权限。</value></data>
+  <data name="CheckCompleteTitle" xml:space="preserve"><value>检查完成</value></data>
+  <data name="CheckCompleteBody" xml:space="preserve"><value>目前没有需要关闭的虚假警告页面，也没有需要关闭的诈骗通知权限。</value></data>
+  <data name="ScarewareClosedExtra" xml:space="preserve"><value>请勿拨打页面上显示的电话号码。页面已关闭。</value></data>
+  <data name="ScarewareCloseFailedExtra" xml:space="preserve"><value>无法自动关闭。请退出浏览器，或在任务管理器中结束对应浏览器进程。</value></data>
+  <data name="ScarewareClosedTitle" xml:space="preserve"><value>已关闭疑似诈骗警告页面</value></data>
+  <data name="ScarewareClosedDetail" xml:space="preserve"><value>{0}: {1} (score {2})</value></data>
+  <data name="ScarewareCloseFailedTitle" xml:space="preserve"><value>无法关闭疑似诈骗警告页面</value></data>
+  <data name="ScarewareCloseFailedDetail" xml:space="preserve"><value>{0}: {1} (score {2})</value></data>
+  <data name="NotifyBlockedTitle" xml:space="preserve"><value>已关闭疑似诈骗通知权限</value></data>
+  <data name="NotifyBlockedDetail" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="NotifyBlockedFeedDetail" xml:space="preserve"><value>{0}: {1} ({2})</value></data>
+  <data name="NotifyBlockedAfterCloseDetail" xml:space="preserve"><value>已结束 {0} 并阻止 {1}，已用新标签页重新启动</value></data>
+  <data name="NotifyBlockedAfterCloseFeedDetail" xml:space="preserve"><value>已结束 {0} 并阻止 {1} ({2})，已用新标签页重新启动</value></data>
+  <data name="NotifyBlockFailedTitle" xml:space="preserve"><value>阻止通知权限失败</value></data>
+  <data name="NotifyBlockFailedDetail" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="NotifyCloseFailedForBlockDetail" xml:space="preserve"><value>无法结束 {0}，因此未能阻止 {1}。</value></data>
+  <data name="NotifyCheckFailedTitle" xml:space="preserve"><value>检查通知设置失败</value></data>
+  <data name="NotifyCheckFailedDetail" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="CheckFailedTitle" xml:space="preserve"><value>诈骗拦截检查失败</value></data>
+</root>
