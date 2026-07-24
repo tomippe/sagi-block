@@ -7,7 +7,7 @@ Partner Center で入力する文言を 3 言語分まとめる。コピペ用�
 ## 基本情報
 
 プライバシーポリシー URL
-https://apps.tomippe.jp/sagi-block/policy/
+[https://apps.tomippe.jp/sagi-block/policy/](https://apps.tomippe.jp/sagi-block/policy/)
 
 カテゴリ
 セキュリティ / Security
@@ -40,7 +40,7 @@ Package Family Name (PFN)
 StudioTomippe.19837858EB356_jrvvt7wkhq9ve
 
 Store URL
-https://apps.microsoft.com/detail/9PKH91ZX0W9J
+[https://apps.microsoft.com/detail/9PKH91ZX0W9J](https://apps.microsoft.com/detail/9PKH91ZX0W9J)
 
 Store ID
 9PKH91ZX0W9J
@@ -61,15 +61,21 @@ windows/publish/msix/SagiBlock.msixbundle
 
 ---
 
+
+
 ## Restricted capabilities（Partner Center 申告）
 
 manifest（`Package.appxmanifest`）で宣言している **Restricted capabilities は 2 つ**。Partner Center の提出フォームでもこの 2 つを選び、理由欄に下記英語をコピペする。
 
-| 種別 | 名前 | manifest | Partner Center で申告 |
-|---|---|---|---|
-| Restricted | runFullTrust | rescap:Capability | **要** |
-| Restricted | unvirtualizedResources | rescap:Capability | **要** |
-| 通常 | internetClient | Capability | 申告不要（Restricted ではない） |
+
+| 種別         | 名前                     | manifest          | Partner Center で申告    |
+| ---------- | ---------------------- | ----------------- | --------------------- |
+| Restricted | runFullTrust           | rescap:Capability | **要**                 |
+| Restricted | unvirtualizedResources | rescap:Capability | **要**                 |
+| 通常         | internetClient         | Capability        | 申告不要（Restricted ではない） |
+
+
+
 
 ### runFullTrust — 理由（英語・コピペ用）
 
@@ -77,7 +83,13 @@ The app is a full-trust desktop tray utility (EntryPoint: Windows.FullTrustAppli
 
 ### unvirtualizedResources — 理由（英語・コピペ用）
 
-The manifest disables file-system and registry write virtualization (desktop6:FileSystemWriteVirtualization / RegistryWriteVirtualization disabled). The app must read and write Chromium-based browsers’ real Preferences JSON under the user profile (e.g. %LOCALAPPDATA%\Google\Chrome\User Data\...) to change notification permissions from Allow to Block, and write logs under %LOCALAPPDATA%\SagiBlock. Virtualized package paths would point to the wrong locations and break notification cleanup.
+**Partner Center の Restricted capability 理由欄は 500 文字上限。** 下記「短縮版」のみ貼る。unvirtualizedResources の詳細と Notes for Certification 全文は正本 `windows/scripts/store-cert-notes-en.txt`（`store-submit.ps1` が API 提出時に自動設定）。
+
+#### 短縮版（500文字以内・Partner Center 理由欄用）
+
+SagiBlock writes real Chromium Preferences JSON to block scam notifications (Chrome, Edge, Brave, Vivaldi, Opera). Virtualized paths fail. Scope: browser Preferences, optional .sagi-block.bak, session-restore cleanup; LOCALAPPDATA\SagiBlock logs/caches only. MSIX: StartupTask, no registry. Flexible Virtualization cannot modify other apps profiles. Policy discloses profile changes and post-uninstall data: https://apps.tomippe.jp/sagi-block/policy/
+
+（450 文字）
 
 ### 通常 capability（参考・申告不要）
 
@@ -85,7 +97,11 @@ internetClient — downloads public threat intelligence feeds only (PhishTank, U
 
 ---
 
+
+
 ## Partner Center リスト登録（3言語）
+
+
 
 ### アプリ名（Product name）
 
@@ -168,47 +184,40 @@ Initial release. Adds automatic detection and closing of fake warning pages, blo
 
 ---
 
+
+
 ## Notes for Certification（審査員向け・英語）
 
-How to verify the app:
+正本: `windows/scripts/store-cert-notes-en.txt`（このファイルだけを編集する）
 
-1. Launch SagiBlock. It runs in the system tray only (no main window). Confirm the tray icon appears and a startup notification may show.
-
-2. Fake warning page test (recommended — safe official demo site):
-   Use the IPA (Information-technology Promotion Agency, Japan) educational experience site. It is not a real scam; all screens are clearly staged for training.
-   URL: https://www.ipa.go.jp/security/anshin/measures/fa-experience.html
-   Steps:
-   a. Read the introductory instructions on that page (section “はじめに”).
-   b. Start the experience from the site (button that launches the demo). A browser window will open showing fake virus-scan / fake Microsoft Defender-style warnings with phrases such as “Trojan Spyware”, “このPCへのアクセスはブロックされています”, and dummy phone numbers (e.g. 000-1234-5678).
-   c. Ensure SagiBlock is running in the tray. Within about 30 seconds, or immediately after choosing Check Now from the tray menu, the app should attempt to close that browser window. A toast notification may report that a suspected scam page was closed.
-   Alternative (local, also safe): clone the repo and serve the bundled test-pages folder on localhost, then open http://127.0.0.1:8765/scareware.html (see test-pages/README.md). Do not browse real scam sites for testing.
-
-3. Notification permission test (Chromium browser):
-   In Chrome (or Edge), manually allow notifications for a suspicious-looking origin in site settings. Run Check Now. If the origin is scored as suspicious, the app may close the browser process first, change the origin from Allow to Block in the browser’s Preferences file under %LOCALAPPDATA%, then restart the browser with a new tab (about:blank). Relaunch if needed and confirm the site is blocked for notifications.
-
-4. Manual check with nothing to fix:
-   Choose Check Now from the tray menu when no scareware window is open and no suspicious notification permissions exist. Expected: a toast saying the check completed with nothing found.
-
-5. To exit: Open the tray menu and choose Quit.
-
-Technical notes:
-
-- The app enumerates top-level windows, reads window titles and child text, and sends WM_CLOSE / CloseMainWindow; in strong browser cases it may terminate the browser process tree.
-- Notification blocking reads and writes Chromium-based browsers’ Preferences JSON under the user profile. A backup copy Preferences.sagi-block.bak may be created on first change.
-- Threat feeds: PhishTank (daily download) and URLhaus API (cached 7 days) are used only to evaluate notification origin hostnames when local scoring is insufficient. No user content or personal identifiers are transmitted; only domain/host lookups against public feeds.
-- Logs: %LOCALAPPDATA%\SagiBlock\events.jsonl and startup.log. No cloud upload.
-
-Why runFullTrust and unvirtualizedResources are required:
-
-- runFullTrust: close other applications’ browser windows, enumerate windows, read titles/text, terminate browser processes when needed.
-- unvirtualizedResources: read/write real Chromium Preferences under the user profile; write logs to %LOCALAPPDATA%\SagiBlock (virtualization disabled in manifest).
-- internetClient (standard, not restricted): download public threat feeds only.
-
-Privacy:
-
-- The app does not collect, store, or transmit personal user data. Network access is limited to downloading public threat intelligence feeds.
+- Partner Center 手動入力: 上記 txt の全文を Notes for Certification にコピペ
+- API 提出: `store-submit.ps1` が同ファイルを `notesForCertification` に自動設定
+- unvirtualizedResources の capability 理由欄（500 文字上限）: 本ドキュメント「Restricted capabilities → unvirtualizedResources → 短縮版」を使用
 
 ---
+
+
+
+## プライバシーポリシー追記（審査 10.6.3 対応・2026-07-09）
+
+WordPress 投稿 ID: 2385（[https://apps.tomippe.jp/sagi-block/policy/）](https://apps.tomippe.jp/sagi-block/policy/）)
+Partner Center の Privacy policy URL と一致させる。以下を「データの保存」の後に追加する。
+
+### ブラウザプロファイルへの変更
+
+本アプリは、詐欺らしい Web 通知をブロックするため、Chromium 系ブラウザ（Chrome、Edge、Brave、Vivaldi、Opera 等）の各プロファイルにある Preferences ファイルを読み取り、通知許可（Allow）になっている origin のうち疑わしいものを Block に変更します。初回変更時のみ、同じフォルダに Preferences.sagi-block.bak というバックアップを作成することがあります。安全にブラウザを再起動するため、同じプロファイルフォルダ内のセッション復元用ファイル（Current Session、Sessions フォルダ内のファイル等）を削除し、Preferences 内の起動設定（restore_on_startup 等）を調整することがあります。Cookie、閲覧履歴、パスワード、ブックマーク等のその他のブラウザデータにはアクセスしません。
+
+### アンインストール後に残るデータ
+
+Microsoft Store 版をアンインストールしても、以下は自動では削除されません。不要であればユーザーが手動で削除できます。
+
+- %LOCALAPPDATA%\SagiBlock\ フォルダ（イベントログ startup.log、events.jsonl、公開脅威情報のキャッシュ等）
+- ブラウザプロファイル内に作成した Preferences.sagi-block.bak
+- Preferences に書き込んだ通知ブロック設定（ブラウザ側の設定として残ります。詐欺通知を防ぐための意図的な動作です）
+
+---
+
+
 
 ## 申請前チェックリスト
 
@@ -216,14 +225,19 @@ Privacy:
 - [ ] manifest の Identity / DisplayName / Publisher が Product identity と一致（DisplayName は SagiBlock）
 - [x] プライバシーポリシー URL を Partner Center に設定する（ページ公開済み。Partner Center への入力は申請時）
 - [ ] ストアの Product name・説明・短い説明に上記 3 言語を登録する
-- [ ] Restricted capabilities に runFullTrust と unvirtualizedResources を申告し、理由欄に上記英語を貼る
+- [ ] Restricted capabilities: runFullTrust 理由は本ドキュメント全文、unvirtualizedResources 理由は **短縮版（500文字以内）** を貼る
+- [ ] Notes for Certification: `windows/scripts/store-cert-notes-en.txt` を Partner Center に貼る（API 提出時は store-submit.ps1 が自動設定）
+- [ ] プライバシーポリシーに「ブラウザプロファイルへの変更」「アンインストール後に残るデータ」を追記済み
 - [ ] データ収集の質問で「個人データを収集しない」を選択する
 - [ ] 提出用 MSIX は windows で .\build.ps1 実行後の publish\msix\SagiBlock.msixbundle を使用する
 
 ---
+
+
 
 ## 参考
 
 - [app-page.md](app-page.md) — apps.tomippe.jp 紹介ページ設定
 - [behavior.md](behavior.md) — 動作・判定基準
 - [../windows/BUILD.md](../windows/BUILD.md) — ビルド手順
+

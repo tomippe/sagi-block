@@ -8,7 +8,7 @@
 
   <Identity Name="StudioTomippe.19837858EB356"
             Publisher="CN=7AA9757D-D72F-4DE2-9980-F9A659207C27"
-            Version="0.1.5.0" />
+            Version="0.1.6.0" />
 
   <Properties>
     <!-- ASCII reserved name — avoids UTF-8 corruption in makeappx / Partner Center validation. -->

@@ -18,15 +18,28 @@ alwaysApply: true
 
 ## ビルドの流れ
 
-1. **Windows PC**: `cd windows` → `powershell -ExecutionPolicy Bypass -File .\build.ps1`
+1. **Windows PC**: `cd windows` → `powershell -ExecutionPolicy Bypass -File .\build.ps1`（MSIX は `%USERPROFILE%\.msstore-env` の PFX で署名）
 2. **Mac**（Store 申請・版反映後）: `./build.sh -cm "変更内容の要約"`
-3. Partner Center へ `windows/publish/msix/SagiBlock.msixbundle` をアップロード
+3. Store 提出（Windows）: `.\build.ps1 -Publish` または `.\scripts\store-submit.ps1`。Mac からは `./scripts/msstore-publish.sh`
+
+## Microsoft Store
+
+- **提出手順（作業指示書）**: `docs/store-submit.md`
+- 申請用文言・Product identity: `docs/store-metadata.md`
+- 紹介ページ: `docs/app-page.md`
+- 提出スクリプト: `scripts/msstore-publish.sh`（`build-common/msstore-publish.sh` ラッパー）
+- Cursor MCP: Marketplace Ingestion（SaaS/M365 向け・MSIX は `msstore` CLI）。`~/.cursor/mcp.json` 参照
+- manifest DisplayName: `SagiBlock`（ASCII）。Identity: `StudioTomippe.19837858EB356`
+- Store ID: `9PKH91ZX0W9J`
+- Identity Version: `X.Y.Z.0`（第 4 桁は常に 0）
 
 ## Windows リリースビルド
 
 - **リリースビルドの標準コマンド**: `powershell -ExecutionPolicy Bypass -File .\build.ps1`（作業ディレクトリは `windows/`）
+- **認証・署名**: `%USERPROFILE%\.msstore-env`（Entra + PFX）。`windows/scripts/_msstore-env.ps1` が読み込む
+- **Store 提出**: `.\build.ps1 -Publish` または `.\scripts\store-submit.ps1`（StoreBroker + `SB_*` / `MSSTORE_*`）
 - **`dotnet build` は確認用**。配布物（MSIX）作成の代替として扱わない
-- **期待成果物**: `windows/publish/msix/SagiBlock.msixbundle`、`SagiBlock_x64.msix`、`SagiBlock_arm64.msix`
+- **期待成果物**: `windows/publish/msix/SagiBlock.msixbundle`（署名済み）、`SagiBlock_x64.msix`、`SagiBlock_arm64.msix`
 - **EXE のみ**: `.\build.ps1 -Exe`
 - **クリーン後フルビルド**: `.\build.ps1 -Clean`
 - 詳細: `windows/BUILD.md`
@@ -41,14 +54,6 @@ alwaysApply: true
 - `manifest.json` の `win_version` を更新して FTP アップロード
 - 成功後 `windows/version.txt` をパッチ +1
 - Git コミット＆プッシュ（remote 設定時）
-
-## Microsoft Store
-
-- 申請用文言・Product identity: `docs/store-metadata.md`
-- 紹介ページ: `docs/app-page.md`
-- manifest DisplayName: `SagiBlock`（ASCII）。Identity: `StudioTomippe.19837858EB356`
-- Store ID: `9PKH91ZX0W9J`
-- Identity Version: `X.Y.Z.0`（第 4 桁は常に 0）
 
 ## 固有設定
 

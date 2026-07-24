@@ -14,7 +14,7 @@
 ## KV背景・キー色
 
 - **app-kvbg**: **2383**（パトライト KV 写真・ユーザー提供）
-- **app-keycolor**: **#FED45B**（Windows アイコンのイエロー）
+- **app-keycolor**: **#F0BE38**（Windows アイコンのイエローをやや濃く）
 - **app-kvbgaddcss**:
   background-repeat: no-repeat;
   background-position: center;
@@ -35,11 +35,13 @@
 
 段落は 1 話題 1 `<p>`。バージョン履歴は app-versions に入れ、本文には書かない。
 
-詐欺ブロックは、Windows 向けのトレイ常駐セキュリティユーティリティです。偽のウイルス警告やサポート詐欺のページを検知して閉じ、Chrome・Edge・Brave・Vivaldi・Opera などで許可されている詐欺らしい Web 通知をブロックします。
+1. 概要（トレイ常駐・検知対象）
+2. 詐欺警告ページの説明 + 例示画像（メディア **2387**）
+3. 詐欺通知の説明 + 例示画像（メディア **2388**）
+4. 判定・脅威情報・定期チェック
+5. プライバシー・Firefox 未対応
 
-30 秒ごとにバックグラウンドでチェックします。トレイメニューの「今すぐチェック」で手動スキャンもできます。
-
-個人データは収集しません。ログは端末内（%LOCALAPPDATA%\SagiBlock）にのみ保存されます。
+例示画像は本文内 `<img width="700">` で掲載（app-ss01 とは別）。
 
 ## 実施済み / 未実施
 
@@ -48,6 +50,7 @@
 - [x] app-icon / app-kvbg / app-ss01 アップロード
 - [x] Microsoft Store Product identity 取得（Store ID: 9PKH91ZX0W9J）
 - [x] MSIX ビルド（windows/build.ps1）
+- [x] Microsoft Store 公開（2026.07.11）— 紹介ページ公開済み
 
 ## 参考
 

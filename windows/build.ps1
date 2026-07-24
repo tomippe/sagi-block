@@ -4,21 +4,32 @@
     SagiBlock Windows Build Script — EXE (portable) + MSIX (Microsoft Store)
 
 .EXAMPLE
-    .\build.ps1              # EXE + MSIX
+    .\build.ps1              # EXE + MSIX (signed)
     .\build.ps1 -Exe         # EXE only
-    .\build.ps1 -Clean       # Clean publish first
+    .\build.ps1 -Clean       # Clean build output first
+    .\build.ps1 -Publish       # EXE + MSIX + Partner Center submit
 #>
 param(
     [switch]$Exe,
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$Publish,
+    [switch]$Noverup
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $rootDir = $PSScriptRoot
+$projectRoot = (Resolve-Path (Join-Path $rootDir "..")).Path
+
+. (Join-Path $rootDir "scripts\_msstore-env.ps1")
+. (Join-Path $projectRoot "..\build-common\helpers.ps1")
+. (Join-Path $projectRoot "..\build-common\version.ps1")
+. (Join-Path $projectRoot "..\build-common\ftp-upload.ps1")
+
+$DIST_DIR = Join-Path $projectRoot "..\apps.tomippe.jp\sagi-block"
 $projectDir = Join-Path $rootDir "SagiBlock"
-$publishDir = Join-Path $rootDir "publish"
+$buildDir = Join-Path $rootDir "build"
 $csproj = Join-Path $projectDir "SagiBlock.csproj"
 $assetsDir = Join-Path $projectDir "Assets"
 $versionFile = Join-Path $rootDir "version.txt"
@@ -46,20 +57,17 @@ if (-not $dotnetVersion) {
 }
 Write-Host ".NET SDK: $dotnetVersion" -ForegroundColor Gray
 
-$version = (Get-Content $versionFile -Raw).Trim()
-if (-not $version) {
-    Write-Error "version.txt is empty."
-    exit 1
-}
+$version = Read-AppVersion -VersionFile $versionFile
+Write-Ok "v$version (from version.txt)"
 
 $csprojContent = Get-Content $csproj -Raw
 $csprojContent = $csprojContent -replace '<Version>[^<]*</Version>', "<Version>$version</Version>"
 Set-Content -Path $csproj -Value $csprojContent -NoNewline
 
-if ($Clean -and (Test-Path $publishDir)) {
-    Remove-Item -Recurse -Force $publishDir
+if ($Clean -and (Test-Path $buildDir)) {
+    Remove-Item -Recurse -Force $buildDir
 }
-New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
+New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
 
 $procs = Get-Process -Name "SagiBlock" -ErrorAction SilentlyContinue
 if ($procs) {
@@ -82,7 +90,7 @@ Write-Host "Building EXE (single-file)..." -ForegroundColor Gray
 
 foreach ($rid in $rids) {
     $arch = $rid -replace "win-", ""
-    $outDir = Join-Path $publishDir "exe\$arch"
+    $outDir = Join-Path $buildDir "exe\$arch"
 
     & dotnet publish $csproj `
         -c Release `
@@ -116,7 +124,18 @@ if ($Exe) {
 Write-Host ""
 Write-Host "Building MSIX (Store package)..." -ForegroundColor Gray
 
-Remove-Item -Recurse -Force (Join-Path $publishDir "msix"), (Join-Path $publishDir "msix-content") -ErrorAction SilentlyContinue
+Load-MsStoreEnv -ProjectRoot $projectRoot
+
+$signingPfx = Resolve-MsStoreSigningPfx -WindowsRoot $rootDir -ProjectRoot $projectRoot
+if ($signingPfx) {
+    $env:MS_STORE_SIGNING_PFX = $signingPfx
+    Write-Host "  Signing PFX: $signingPfx" -ForegroundColor Gray
+} else {
+    Write-Error "MS_STORE_SIGNING_PFX not found. Configure %USERPROFILE%\.msstore-env (see build-common/msstore-env.example)."
+    exit 1
+}
+
+Remove-Item -Recurse -Force (Join-Path $buildDir "msix"), (Join-Path $buildDir "msix-content") -ErrorAction SilentlyContinue
 
 $makeappx = Find-MakeAppx
 if (-not $makeappx) {
@@ -125,7 +144,7 @@ if (-not $makeappx) {
 }
 Write-Host "  makeappx.exe: $makeappx" -ForegroundColor Gray
 
-$msixOutputDir = Join-Path $publishDir "msix"
+$msixOutputDir = Join-Path $buildDir "msix"
 New-Item -ItemType Directory -Path $msixOutputDir -Force | Out-Null
 
 $msixFiles = @()
@@ -133,7 +152,7 @@ $msixVersion = "$version.0"
 
 foreach ($rid in $rids) {
     $arch = $rid -replace "win-", ""
-    $contentDir = Join-Path $publishDir "msix-content\$arch"
+    $contentDir = Join-Path $buildDir "msix-content\$arch"
 
     Write-Host "  Publishing $rid (multi-file for MSIX)..." -ForegroundColor Gray
 
@@ -199,8 +218,10 @@ foreach ($rid in $rids) {
         exit 1
     }
 
+    Sign-StorePackage -PackagePath $msixPath -PfxPath $signingPfx
+
     $msixSize = [math]::Round((Get-Item $msixPath).Length / 1MB, 1)
-    Write-Host "OK: $msixPath ($msixSize MB)" -ForegroundColor Green
+    Write-Host "OK: $msixPath ($msixSize MB, signed)" -ForegroundColor Green
     $msixFiles += $msixPath
 }
 
@@ -209,7 +230,7 @@ if ($msixFiles.Count -gt 0) {
     Write-Host "Creating MSIX Bundle..." -ForegroundColor Gray
 
     $bundlePath = Join-Path $msixOutputDir "SagiBlock.msixbundle"
-    $bundleContentDir = Join-Path $publishDir "msix-bundle-content"
+    $bundleContentDir = Join-Path $buildDir "msix-bundle-content"
 
     if (Test-Path $bundleContentDir) { Remove-Item -Recurse -Force $bundleContentDir }
     New-Item -ItemType Directory -Path $bundleContentDir -Force | Out-Null
@@ -222,8 +243,10 @@ if ($msixFiles.Count -gt 0) {
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Bundle creation failed. Individual MSIX files are still available."
     } else {
+        Sign-StorePackage -PackagePath $bundlePath -PfxPath $signingPfx
+
         $bundleSize = [math]::Round((Get-Item $bundlePath).Length / 1MB, 1)
-        Write-Host "OK: $bundlePath ($bundleSize MB, bundle v$msixVersion)" -ForegroundColor Green
+        Write-Host "OK: $bundlePath ($bundleSize MB, bundle v$msixVersion, signed)" -ForegroundColor Green
 
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $bundleZip = [System.IO.Compression.ZipFile]::OpenRead($bundlePath)
@@ -245,9 +268,41 @@ if ($msixFiles.Count -gt 0) {
     Remove-Item -Recurse -Force $bundleContentDir -ErrorAction SilentlyContinue
 }
 
-Remove-Item -Recurse -Force (Join-Path $publishDir "msix-content") -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force (Join-Path $buildDir "msix-content") -ErrorAction SilentlyContinue
+
+Write-Step "manifest.json"
+
+New-Item -ItemType Directory -Path $DIST_DIR -Force | Out-Null
+$manifestPath = Join-Path $DIST_DIR "manifest.json"
+$manifest = @{}
+if (Test-Path $manifestPath) {
+    $existing = Get-Content $manifestPath -Raw | ConvertFrom-Json
+    $existing.PSObject.Properties | ForEach-Object { $manifest[$_.Name] = $_.Value }
+}
+$manifest['win_version'] = $version
+$manifest['version'] = $version
+if (-not $manifest.ContainsKey('name')) { $manifest['name'] = 'SagiBlock' }
+$manifest | ConvertTo-Json -Compress | Set-Content -Path $manifestPath -Encoding UTF8 -NoNewline
+Write-Ok "manifest.json を更新しました (win_version: $version)"
+
+Send-FtpFile -LocalFile $manifestPath -RemotePath "sagi-block/manifest.json"
+
+if (-not $Noverup) {
+    Write-Step "Version Update"
+    Save-NextAppVersion -Version $version -VersionFile $versionFile
+}
 
 Write-Host ""
 Write-Host "Build complete: v$version" -ForegroundColor Green
-Write-Host "  EXE: publish\exe\x64, publish\exe\arm64" -ForegroundColor Gray
-Write-Host "  MSIX: publish\msix\SagiBlock.msixbundle (Partner Center upload)" -ForegroundColor Gray
+Write-Host "  EXE: build\exe\x64, build\exe\arm64" -ForegroundColor Gray
+Write-Host "  MSIX: build\msix\SagiBlock.msixbundle (signed, Partner Center upload)" -ForegroundColor Gray
+
+if ($Publish) {
+    Write-Host ""
+    Write-Host "Submitting to Microsoft Store..." -ForegroundColor Cyan
+    & (Join-Path $rootDir "scripts\store-submit.ps1") -BundlePath (Join-Path $buildDir "msix\SagiBlock.msixbundle")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "store-submit.ps1 failed"
+        exit 1
+    }
+}

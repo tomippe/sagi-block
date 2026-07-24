@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using CommunityToolkit.WinUI.Notifications;
 using SagiBlock.Helpers;
 using SagiBlock.Models;
 using SagiBlock.Services;
@@ -11,6 +12,11 @@ namespace SagiBlock;
 
 public partial class App : System.Windows.Application
 {
+    public App()
+    {
+        ToastNotificationManagerCompat.OnActivated += OnToastActivated;
+    }
+
     private WinForms.NotifyIcon? _trayIcon;
     private NotificationService? _notifications;
     private ScamGuardService? _guard;
@@ -22,6 +28,12 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        if (!SingleInstanceHelper.TryBecomePrimary())
+        {
+            Shutdown();
+            return;
+        }
+
         base.OnStartup(e);
 
         DispatcherUnhandledException += (_, args) =>
@@ -57,6 +69,7 @@ public partial class App : System.Windows.Application
             _hwnd = new WindowInteropHelper(_hiddenWindow).Handle;
 
             SetupTray();
+            SingleInstanceHelper.StartListening(() => Dispatcher.Invoke(ShowNativeMenu));
             _ = RefreshOpenAtLoginStateAsync();
             StartupLog.Write("Tray ready");
 
@@ -104,10 +117,16 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        SingleInstanceHelper.StopListening();
         _timer?.Stop();
         _trayIcon?.Dispose();
         _hiddenWindow?.Close();
         base.OnExit(e);
+    }
+
+    private void OnToastActivated(ToastNotificationActivatedEventArgsCompat e)
+    {
+        Dispatcher.Invoke(ShowNativeMenu);
     }
 
     private void SetupTray()

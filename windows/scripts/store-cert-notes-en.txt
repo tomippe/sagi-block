@@ -1,0 +1,43 @@
+How to verify the app:
+
+1. Launch SagiBlock. It runs in the system tray only (no main window). Confirm the tray icon appears and a startup notification may show.
+
+2. Fake warning page test (recommended — safe official demo site):
+   Use the IPA (Information-technology Promotion Agency, Japan) educational experience site. It is not a real scam; all screens are clearly staged for training.
+   URL: https://www.ipa.go.jp/security/anshin/measures/fa-experience.html
+   Steps:
+   a. Read the introductory instructions on that page (section "はじめに").
+   b. Start the experience from the site (button that launches the demo). A browser window will open showing fake virus-scan / fake Microsoft Defender-style warnings with phrases such as "Trojan Spyware", "このPCへのアクセスはブロックされています", and dummy phone numbers (e.g. 000-1234-5678).
+   c. Ensure SagiBlock is running in the tray. Within about 30 seconds, or immediately after choosing Check Now from the tray menu, the app should attempt to close that browser window. A toast notification may report that a suspected scam page was closed.
+   Alternative (local, also safe): clone the repo and serve the bundled test-pages folder on localhost, then open http://127.0.0.1:8765/scareware.html (see test-pages/README.md). Do not browse real scam sites for testing.
+
+3. Notification permission test (Chromium browser):
+   In Chrome (or Edge), manually allow notifications for a suspicious-looking origin in site settings. Run Check Now. If the origin is scored as suspicious, the app may close the browser process first, change the origin from Allow to Block in the browser's Preferences file under %LOCALAPPDATA%, then restart the browser with a new tab (about:blank). Relaunch if needed and confirm the site is blocked for notifications.
+
+4. Manual check with nothing to fix:
+   Choose Check Now from the tray menu when no scareware window is open and no suspicious notification permissions exist. Expected: a toast saying the check completed with nothing found.
+
+5. To exit: Open the tray menu and choose Quit.
+
+Technical notes:
+
+- The app enumerates top-level windows, reads window titles and child text, and sends WM_CLOSE / CloseMainWindow; in strong browser cases it may terminate the browser process tree.
+- Notification blocking reads and writes Chromium-based browsers' Preferences JSON under the user profile. A backup copy Preferences.sagi-block.bak may be created on first change. Session restore files in the profile folder may be deleted and restore_on_startup adjusted so the browser reopens with a new tab.
+- Threat feeds: PhishTank (daily download) and URLhaus API (cached 7 days) are used only to evaluate notification origin hostnames when local scoring is insufficient. No user content or personal identifiers are transmitted; only domain/host lookups against public feeds.
+- Logs and caches: %LOCALAPPDATA%\SagiBlock\ only (events.jsonl, startup.log, feeds\, domain-threat-cache.json). No cloud upload.
+
+Why runFullTrust and unvirtualizedResources are required:
+
+- runFullTrust: close other applications' browser windows, enumerate windows, read titles/text, terminate browser processes when needed.
+- unvirtualizedResources (reconsideration 2026-07-09, policy 10.6.3): read/write real Chromium Preferences and related session-restore files under the user profile; write app logs/caches under %LOCALAPPDATA%\SagiBlock only. File-system virtualization would write to package-private paths that Chromium never loads. Flexible Virtualization was evaluated and does not allow modifying another application's browser profile store.
+- Strict scope of unvirtualized file access:
+  (1) Chromium browser profile files under the signed-in user profile: read/write Preferences (notification entries under profile.content_settings.exceptions.notifications); read/write profile.exited_cleanly, profile.exit_type, session.restore_on_startup when restarting after a block; delete session restore snapshots (Current Session, Current Tabs, Last Session, Last Tabs, Sessions/); create Preferences.sagi-block.bak on first change. Browsers: Chrome, Edge, Brave, Vivaldi under %LOCALAPPDATA%\...\User Data\Default|Profile *; Opera / Opera GX under %APPDATA%\Opera Software\...\Preferences. No access to cookies, history, passwords, bookmarks, extensions, or other profile files.
+  (2) App-owned data under %LOCALAPPDATA%\SagiBlock only (events.jsonl, startup.log, domain-threat-cache.json, feeds\). No other disk writes.
+  MSIX build: auto-start via StartupTask (no HKCU Run); no AUMID registry writes when packaged (PackageHelper.IsPackaged()).
+- internetClient (standard, not restricted): download public threat feeds only.
+
+Privacy and persistence (privacy policy: https://apps.tomippe.jp/sagi-block/policy/):
+
+- The app does not collect, store, or transmit personal user data. Network access is limited to downloading public threat intelligence feeds.
+- Browser profile changes: notification Allow to Block entries in Preferences; optional Preferences.sagi-block.bak; session-restore cleanup for safe restart.
+- After uninstall, %LOCALAPPDATA%\SagiBlock\ and any Preferences.sagi-block.bak files may remain until the user deletes them. Block entries already written into browser Preferences remain (by design).
